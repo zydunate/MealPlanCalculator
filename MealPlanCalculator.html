@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meal Plan Billing Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #830019; --primary-light: #98001c; --primary-dark: #710016;
+      --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db;
+      --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151;
+      --gray-800: #1f2937; --gray-900: #111827; --success: #10b981; --danger: #ef4444;
+    }
+    html, body {
+      font-family: "Roboto-Condensed", sans-serif; background-color: var(--gray-50);
+      color: var(--gray-900); line-height: 1.5; min-height: 100vh; display: flex; flex-direction: column;
+    }
+    main { flex: 1; padding-bottom: 2rem; }
+    .navBar {
+      top: 0; left: 0; height: 80px; width: 100%; position: fixed; z-index: 100;
+      background: linear-gradient(to right, var(--primary-dark), var(--primary-light));
+      color: white; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .header-content {
+      max-width: 1200px; margin: 0 auto; height: 100%; display: flex;
+      justify-content: space-between; align-items: center; padding: 0 2rem;
+    }
+    .header-content h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.025em; }
+    .logo { height: 40px; width: auto; filter: brightness(0) invert(1); transition: transform 0.3s ease; }
+    .logo:hover { transform: scale(1.05); }
+    .drop-zone-container {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      margin: 120px auto 0; max-width: 800px; padding: 0 1rem;
+    }
+    .welcome-text { text-align: center; margin-bottom: 2rem; }
+    .welcome-text h2 { font-size: 2rem; color: var(--gray-800); margin-bottom: 0.5rem; }
+    .welcome-text p { color: var(--gray-600); font-size: 1.1rem; }
+    .drop-zone {
+      border-radius: 1rem; width: 100%; height: 300px; border: 3px dashed var(--gray-300);
+      background-color: white; transition: all 0.3s ease; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    .drop-zone:hover {
+      border-color: var(--primary); transform: scale(1.02); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    .drop-zone.dragging {
+      border-color: var(--primary); background-color: rgba(131, 0, 25, 0.05); transform: scale(1.05);
+    }
+    .upload-icon {
+      background-color: rgba(131, 0, 25, 0.1); width: 80px; height: 80px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;
+    }
+    .upload-icon svg { width: 40px; height: 40px; color: var(--primary); }
+    .drop-text { font-size: 1.25rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem; }
+    .file-types { font-size: 0.875rem; color: var(--gray-500); }
+    .elements { margin-top: 100px; padding: 0 1rem; }
+    .remove-file-container {
+      display: flex; align-items: center; max-width: 1200px; margin: 0 auto 1rem; padding: 0 1rem;
+    }
+    #fileName { font-weight: 600; margin-left: 1rem; color: var(--gray-700); }
+    #removeFileBtn {
+      width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--gray-300);
+      background-color: white; color: var(--gray-400); font-weight: 700;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;
+    }
+    #removeFileBtn:hover { color: var(--danger); border-color: var(--danger); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+    .main-container {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+      max-width: 1200px; margin: 0 auto; padding: 0 1rem;
+    }
+    @media (max-width: 768px) { .main-container { grid-template-columns: 1fr; } }
+    .left-container, .right-container { width: 100%; }
+    h2 {
+      font-size: 1.5rem; color: var(--gray-800); margin-bottom: 1rem;
+      padding-bottom: 0.5rem; border-bottom: 2px solid var(--gray-200);
+    }
+    h3 { font-size: 1.1rem; color: var(--gray-700); margin-bottom: 0.75rem; }
+    .table-container {
+      max-height: 400px; overflow: auto; border: 1px solid var(--gray-200);
+      border-radius: 0.5rem; background-color: white; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.75rem; text-align: left; border: 1px solid var(--gray-200); }
+    th {
+      background-color: var(--primary); color: white; font-weight: 600;
+      position: sticky; top: 0; z-index: 10;
+    }
+    th:first-child, td:first-child { text-align: center; width: 60px; }
+    tr:hover { background-color: var(--gray-50); }
+    tr.highlight { background-color: rgba(131, 0, 25, 0.05); border-left: 3px solid var(--primary); }
+    .price-cell { color: var(--success); font-weight: 600; cursor: pointer; position: relative; }
+    .price-cell:hover { background-color: rgba(16, 185, 129, 0.1); }
+    .row-selector { margin-top: 1rem; }
+    #desiredRow, #withdrawalWeeks {
+      width: 100%; padding: 0.75rem; border: 2px solid var(--gray-300);
+      border-radius: 0.5rem; font-size: 1rem; transition: all 0.3s ease;
+    }
+    #withdrawalWeeks { margin-bottom: 0.5rem; }
+    #desiredRow:focus, #withdrawalWeeks:focus {
+      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(131, 0, 25, 0.2);
+    }
+    #confirmation-msg { margin-top: 0.5rem; color: var(--primary); font-weight: 500; }
+    .calculator-container {
+      background-color: white; border-radius: 0.75rem; padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid var(--gray-200);
+    }
+    .calculator-section {
+      margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--gray-200);
+    }
+    .calculator-section:last-of-type { border-bottom: none; }
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+    }
+    #totalAmount {
+      padding: 0.75rem; background-color: var(--gray-50); border: 1px solid var(--gray-200);
+      border-radius: 0.5rem; font-size: 1.25rem; font-weight: 600; color: var(--gray-800); transition: all 0.3s ease;
+    }
+    #totalAmount:hover {
+      background-color: white; border-color: var(--primary); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .meal-plan-selector { display: flex; flex-direction: column; gap: 0.75rem; }
+    .meal-plan-option {
+      display: flex; align-items: center; padding: 0.75rem; border: 1px solid var(--gray-200);
+      border-radius: 0.5rem; background-color: white; transition: all 0.3s ease;
+    }
+    .meal-plan-option:hover { background-color: var(--gray-50); }
+    .meal-plan-option input[type="radio"] { margin-right: 0.75rem; }
+    .meal-plan-option label { flex: 1; font-weight: 500; color: var(--gray-700); }
+    .meal-plan-option span { font-weight: 600; color: var(--primary); }
+    .price-editor, .rate-editor {
+      margin-top: 1rem; padding: 1rem; background-color: var(--gray-50);
+      border: 1px solid var(--gray-200); border-radius: 0.5rem;
+    }
+    .price-edit-field, .rate-edit-field {
+      display: flex; align-items: center; margin-bottom: 0.75rem;
+    }
+    .price-edit-field label, .rate-edit-field label {
+      width: 120px; font-weight: 500; color: var(--gray-700);
+    }
+    .price-edit-field input, .rate-edit-field input {
+      flex: 1; padding: 0.5rem; border: 1px solid var(--gray-300);
+      border-radius: 0.25rem; transition: all 0.3s ease;
+    }
+    .price-edit-field input:focus, .rate-edit-field input:focus {
+      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(131, 0, 25, 0.2);
+    }
+    .edit-button, .save-button, .calculate-button, .copy-button {
+      padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; font-weight: 500;
+      cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;
+    }
+    .edit-button {
+      background-color: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-300);
+    }
+    .edit-button:hover { background-color: var(--gray-200); }
+    .save-button {
+      background-color: var(--success); color: white; margin-top: 0.75rem;
+    }
+    .save-button:hover { background-color: #0da271; }
+    .calculate-button {
+      background-color: var(--primary); color: white; font-size: 1.1rem;
+      padding: 0.75rem 1rem; width: 100%; margin-top: 1rem;
+    }
+    .calculate-button:hover {
+      background-color: var(--primary-dark); transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .calculate-icon, .copy-icon { margin-right: 0.5rem; }
+    .copy-button {
+      background-color: var(--gray-100); color: var(--gray-700); font-size: 0.875rem;
+    }
+    .copy-button:hover { background-color: var(--gray-200); }
+    .copy-button.copied { background-color: var(--success); color: white; }
+    .help-text { font-size: 0.875rem; color: var(--gray-500); }
+    .calculation-toggle { display: flex; align-items: center; gap: 1rem; }
+    .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--gray-300); transition: .4s; border-radius: 34px;
+    }
+    .toggle-slider:before {
+      position: absolute; content: ""; height: 26px; width: 26px;
+      left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%;
+    }
+    input:checked + .toggle-slider { background-color: var(--primary); }
+    input:checked + .toggle-slider:before { transform: translateX(26px); }
+    .toggle-label { display: flex; flex-direction: column; }
+    .rate-value { font-size: 0.875rem; color: var(--gray-500); }
+    .result-container {
+      margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-200);
+    }
+    .result-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+    }
+    .result-box {
+      padding: 1rem; background-color: var(--gray-50); border: 1px solid var(--gray-200);
+      border-radius: 0.5rem; white-space: pre-line; transition: all 0.3s ease;
+    }
+    .result-box:hover {
+      background-color: white; border-color: var(--primary); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .tooltip { position: relative; display: inline-block; width: 100%; }
+    .tooltip-text {
+      visibility: hidden; width: 120px; background-color: var(--primary); color: white;
+      text-align: center; border-radius: 0.25rem; padding: 0.25rem 0.5rem; position: absolute;
+      z-index: 1; bottom: 125%; left: 50%; margin-left: -60px; opacity: 0; transition: opacity 0.3s;
+      font-size: 0.75rem; pointer-events: none;
+    }
+    .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+    .table-container::-webkit-scrollbar { width: 10px; height: 10px; }
+    .table-container::-webkit-scrollbar-track { background: var(--gray-100); border-radius: 5px; }
+    .table-container::-webkit-scrollbar-thumb {
+      background: var(--gray-400); border-radius: 5px; border: 2px solid var(--gray-100);
+    }
+    .table-container::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+    .text-maroon { color: var(--primary); }
+    .text-green-600 { color: var(--success); }
+    .text-red-600 { color: var(--danger); }
+    .text-gray-800 { color: var(--gray-800); }
+    .inactive { display: none !important; }
+    .mb-4 { margin-bottom: 1rem; }
+    .font-medium { font-weight: 500; }
+    .font-bold { font-weight: 700; }
+    .text-xl { font-size: 1.25rem; }
+    footer {
+      background-color: var(--gray-100); border-top: 1px solid var(--gray-200);
+      padding: 1.5rem; text-align: center; color: var(--gray-600); font-size: 0.875rem; margin-top: auto;
+    }
+    .result-section { margin-bottom: 1rem; }
+    .result-line { margin-bottom: 0.5rem; line-height: 1.5; }
+    .result-block {
+      padding: 1rem; margin-bottom: 1rem; background-color: var(--gray-50);
+      border: 1px solid var(--gray-200); border-radius: 0.5rem;
+    }
+    .result-line {
+      padding: 0.25rem 0; font-size: 1.1rem; color: var(--gray-800);
+    }
+    .result-line:last-child {
+      font-weight: 700; color: var(--primary); font-size: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="navBar">
+      <div class="header-content">
+        <h1>Meal Plan Billing Calculator</h1>
+        <div class="logo-container">
+          <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/UWL_Logo-7FFJNm4rO187ediTzd5V83q1IMqCEQ.png" alt="UWL Logo" class="logo">
+        </div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div id='drop-zone-container' class="drop-zone-container">
+      <div class="welcome-text">
+        <h2>Welcome to the Meal Plan Billing Calculator</h2>
+        <p>Upload your spreadsheet to calculate meal plan refunds and charges based on withdrawal dates.</p>
+      </div>
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-content">
+          <div class="upload-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <p class="drop-text">Drop your spreadsheet here or click to upload</p>
+          <p class="file-types">Supports Excel files (.xlsx, .xls)</p>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="upload" style="display:none;" accept=".xlsx,.xls" />
+    <div class="elements inactive" id="elements">
+      <div class="remove-file-container">
+        <button id="removeFileBtn">X</button>
+        <p id="fileName">File Name: *File Name*</p>
+      </div>
+      <div class="main-container">
+        <div class="left-container">
+          <h2>Spreadsheet Data</h2>
+          <div class="table-container">
+            <table id="spreadsheetTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="row-selector">
+            <input type="number" placeholder="Enter row number" id="desiredRow" />
+            <p id="confirmation-msg"></p>
+          </div>
+        </div>
+        <div class="right-container">
+          <h2>Meal Plan Calculator</h2>
+          <div class="calculator-container">
+            <div class="calculator-section">
+              <h3>Selected Amount</h3>
+              <div class="tooltip">
+                <div id="totalAmount" class="tooltip-hover">$0.00</div>
+                <span class="tooltip-text">Click on a price in the table</span>
+              </div>
+            </div>
+            <div class="calculator-section">
+              <div class="section-header">
+                <h3>Select Meal Plan</h3>
+                <button id="editPricesBtn" class="edit-button">Edit Prices</button>
+              </div>
+              <div class="meal-plan-selector">
+                <div class="meal-plan-option">
+                  <input type="radio" id="strykerClassic" name="mealPlan" value="strykerClassic" checked>
+                  <label for="strykerClassic">Stryker Classic</label>
+                  <span id="strykerClassicPrice">$1,527.00</span>
+                </div>
+                <div class="meal-plan-option">
+                  <input type="radio" id="strykerDouble" name="mealPlan" value="strykerDouble">
+                  <label for="strykerDouble">Stryker Double</label>
+                  <span id="strykerDoublePrice">$1,200.00</span>
+                </div>
+              </div>
+              <div id="priceEditor" class="price-editor inactive">
+                <div class="price-edit-field">
+                  <label for="classicPriceInput">Stryker Classic:</label>
+                  <input type="number" id="classicPriceInput" value="1527">
+                </div>
+                <div class="price-edit-field">
+                  <label for="doublePriceInput">Stryker Double:</label>
+                  <input type="number" id="doublePriceInput" value="1200">
+                </div>
+                <button id="savePricesBtn" class="save-button">Save Prices</button>
+              </div>
+            </div>
+            <div class="calculator-section">
+              <h3>Weeks Before Withdrawal</h3>
+              <input type="number" id="withdrawalWeeks" placeholder="Enter weeks (0-15)" min="0" max="15">
+              <p class="help-text">Enter number of weeks attended before withdrawal (0-15)</p>
+            </div>
+            <div class="calculator-section">
+              <div class="section-header">
+                <h3>Calculation Method</h3>
+                <button id="editRateBtn" class="edit-button">Edit Rate</button>
+              </div>
+              <div class="calculation-toggle">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="useFixedRate" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+                <div class="toggle-label">
+                  <span>Use fixed weekly rate</span>
+                  <p class="rate-value" id="weeklyRateDisplay">$113.20 per week</p>
+                </div>
+              </div>
+              <div id="rateEditor" class="rate-editor inactive">
+                <div class="rate-edit-field">
+                  <label for="weeklyRateInput">Weekly Rate ($):</label>
+                  <input type="number" id="weeklyRateInput" value="113.20" step="0.01">
+                </div>
+                <button id="saveRateBtn" class="save-button">Save Rate</button>
+              </div>
+            </div>
+            <button id="calculateBtn" class="calculate-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="calculate-icon">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              Calculate Charge
+            </button>
+            <div id="resultContainer" class="result-container inactive">
+              <div class="result-header">
+                <h3>Calculation Result</h3>
+                <button id="copyResultBtn" class="copy-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy
+                </button>
+              </div>
+              <div class="tooltip">
+                <div id="calculationResult" class="tooltip-hover result-box"></div>
+                <span class="tooltip-text">Click to copy</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <p>© <span id="currentYear"></span> University of Wisconsin-La Crosse. All rights reserved.</p>
+  </footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    const SEMESTER_WEEKS = 15;
+    let data, selectedRowIndex, totalAmount = 0;
+    let planRates = { strykerClassic: 1527, strykerDouble: 1200 };
+    let weeklyMealCost = 113.2;
+
+    // elements needed
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('upload');
+    const elements = document.getElementById('elements');
+    const fileNameLbl = document.getElementById('fileName');
+    const removeFileBtn = document.getElementById('removeFileBtn');
+    const desiredRowInput = document.getElementById('desiredRow');
+    const tableHead = document.querySelector('#spreadsheetTable thead');
+    const tableBody = document.querySelector('#spreadsheetTable tbody');
+    const totalAmountElement = document.getElementById('totalAmount');
+    const strykerClassicPriceElement = document.getElementById('strykerClassicPrice');
+    const strykerDoublePriceElement = document.getElementById('strykerDoublePrice');
+    const editPricesBtn = document.getElementById('editPricesBtn');
+    const priceEditor = document.getElementById('priceEditor');
+    const classicPriceInput = document.getElementById('classicPriceInput');
+    const doublePriceInput = document.getElementById('doublePriceInput');
+    const savePricesBtn = document.getElementById('savePricesBtn');
+    const withdrawalWeeksInput = document.getElementById('withdrawalWeeks');
+    const useFixedRateCheckbox = document.getElementById('useFixedRate');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const resultContainer = document.getElementById('resultContainer');
+    const calculationResult = document.getElementById('calculationResult');
+    const copyResultBtn = document.getElementById('copyResultBtn');
+    const currentYearElement = document.getElementById('currentYear');
+    const editRateBtn = document.getElementById('editRateBtn');
+    const rateEditor = document.getElementById('rateEditor');
+    const weeklyRateInput = document.getElementById('weeklyRateInput');
+    const saveRateBtn = document.getElementById('saveRateBtn');
+    const weeklyRateDisplay = document.getElementById('weeklyRateDisplay');
+
+    currentYearElement.textContent = new Date().getFullYear();
+
+    //  all of the event listeners
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+    removeFileBtn.addEventListener('click', resetPage);
+    desiredRowInput.addEventListener('change', handleRowInputChange);
+    desiredRowInput.addEventListener('input', handleRowInputChange);
+    editPricesBtn.addEventListener('click', togglePriceEditor);
+    savePricesBtn.addEventListener('click', savePrices);
+    calculateBtn.addEventListener('click', calculateCharge);
+    copyResultBtn.addEventListener('click', () => copyToClipboard(calculationResult.textContent));
+    calculationResult.addEventListener('click', () => copyToClipboard(calculationResult.textContent));
+    editRateBtn.addEventListener('click', toggleRateEditor);
+    saveRateBtn.addEventListener('click', saveRate);
+
+    // Drag and drop functionality
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragging'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragging');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const arrayData = new Uint8Array(event.target.result);
+        const workBook = XLSX.read(arrayData, { type: 'array' });
+        const sheet = workBook.Sheets[workBook.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: " " });
+        fileNameLbl.textContent = "File Name: " + file.name;
+        dropZone.parentElement.classList.add('inactive');
+        elements.classList.remove('inactive');
+        if (data && data.length > 0) {
+          removeBlankColumns();
+          renderHeaders();
+          renderWholeTable();
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function resetPage() {
+      data = null;
+      selectedRowIndex = null;
+      totalAmount = 0;
+      fileInput.value = '';
+      elements.classList.add('inactive');
+      dropZone.parentElement.classList.remove('inactive');
+      resultContainer.classList.add('inactive');
+      totalAmountElement.textContent = '$0.00';
+      withdrawalWeeksInput.value = '';
+      tableHead.innerHTML = '';
+      tableBody.innerHTML = '';
+      desiredRowInput.value = '';
+      document.getElementById('confirmation-msg').textContent = '';
+    }
+
+    function removeBlankColumns() {
+      if (!data || data.length === 0) return;
+      let transposedData = data[0].map((_, colIndex) => data.map(row => row[colIndex]));
+      let filteredData = transposedData.filter(col => col.some(cell => {
+        if (typeof cell === 'string') return cell.trim() !== '';
+        return cell !== ' ';
+      }));
+      data = filteredData[0].map((_, colIndex) => filteredData.map(row => row[colIndex]));
+    }
+
+    function renderHeaders() {
+      tableHead.innerHTML = '';
+      if (!data || data.length === 0) return;
+      let headers = data[0];
+      headers.unshift("Row");
+      let headerRow = document.createElement('tr');
+      headers.forEach(header => {
+        let th = document.createElement('th');
+        th.textContent = header;
+        headerRow.appendChild(th);
+      });
+      tableHead.appendChild(headerRow);
+    }
+
+    function renderWholeTable() {
+      tableBody.innerHTML = '';
+      if (!data || data.length <= 1) return;
+      data.slice(1).forEach((row, index) => {
+        addRowToTable(row, index);
+      });
+    }
+
+    function addRowToTable(row, index) {
+      let tr = document.createElement('tr');
+      tr.dataset.index = index;
+      let rowMarker = document.createElement('td');
+      rowMarker.textContent = index + 1;
+      tr.appendChild(rowMarker);
+      row.forEach(cell => {
+        let td = document.createElement('td');
+        if (typeof cell === 'number' || (typeof cell === 'string' && cell.includes('$'))) {
+          td.classList.add('price-cell');
+          td.addEventListener('click', (e) => {
+            e.stopPropagation();
+            extractPrice(cell);
+          });
+        }
+        if (typeof cell === 'number') {
+          td.textContent = formatCurrency(cell);
+        } else {
+          td.textContent = cell;
+        }
+        tr.appendChild(td);
+      });
+      tr.addEventListener('click', function () {
+        selectRowWithIndex(index);
+        document.querySelectorAll('tbody tr').forEach(r => r.classList.remove('highlight'));
+        tr.classList.add('highlight');
+      });
+      tableBody.appendChild(tr);
+    }
+    function extractPrice(text) {
+      let price = 0;
+      if (typeof text === 'number') {
+        price = text;
+      } else if (typeof text === 'string') {
+        const priceMatch = text.match(/\$?([\d,]+(\.\d+)?)/);
+        if (priceMatch) {
+          price = parseFloat(priceMatch[1].replace(/,/g, ''));
+        }
+      }
+      if (!isNaN(price) && price > 0) {
+        totalAmount = price;
+        totalAmountElement.textContent = formatCurrency(price);
+      }
+    }
+
+    function selectRowWithIndex(index) {
+      let prevSelectedRow = document.querySelector('tr.selected');
+      if (prevSelectedRow) prevSelectedRow.classList.remove('selected');
+      let selectedRow = document.querySelector(`tr[data-index='${index}']`);
+      if (selectedRow) {
+        selectedRow.classList.add('highlight');
+      }
+      selectedRowIndex = index + 1;
+    }
+
+    function handleRowInputChange() {
+      if (data == null) return;
+      selectedRowIndex = parseInt(desiredRowInput.value);
+      tableBody.innerHTML = '';
+      if (isNaN(selectedRowIndex) || selectedRowIndex < 1 || selectedRowIndex >= data.length) {
+        renderWholeTable();
+        document.getElementById('confirmation-msg').textContent = "";
+      } else {
+        renderSingleRow();
+      }
+    }
+
+    function renderSingleRow() {
+      addRowToTable(data[selectedRowIndex], selectedRowIndex - 1);
+      selectRowWithIndex(selectedRowIndex - 1);
+      document.getElementById('confirmation-msg').textContent = "Is this the row you want to use for calculation?";
+    }
+
+    function togglePriceEditor() {
+      if (priceEditor.classList.contains('inactive')) {
+        priceEditor.classList.remove('inactive');
+        editPricesBtn.textContent = 'Cancel';
+      } else {
+        priceEditor.classList.add('inactive');
+        editPricesBtn.textContent = 'Edit Prices';
+        classicPriceInput.value = planRates.strykerClassic;
+        doublePriceInput.value = planRates.strykerDouble;
+      }
+    }
+
+    // save edited prices
+    function savePrices() {
+      const classicPrice = parseFloat(classicPriceInput.value);
+      const doublePrice = parseFloat(doublePriceInput.value);
+      let isValid = true;
+      
+      if (!isNaN(classicPrice) && classicPrice > 0) {
+        planRates.strykerClassic = parseFloat(classicPrice.toFixed(2));
+        strykerClassicPriceElement.textContent = formatCurrency(classicPrice);
+      } else {
+        alert("Please enter a valid price for Stryker Classic (must be greater than zero).");
+        classicPriceInput.value = planRates.strykerClassic;
+        isValid = false;
+      }
+      
+      if (!isNaN(doublePrice) && doublePrice > 0) {
+        planRates.strykerDouble = parseFloat(doublePrice.toFixed(2));
+        strykerDoublePriceElement.textContent = formatCurrency(doublePrice);
+      } else {
+        alert("Please enter a valid price for Stryker Double (must be greater than zero).");
+        doublePriceInput.value = planRates.strykerDouble;
+        isValid = false;
+      }
+      
+      if (!isValid) return;
+      
+      priceEditor.classList.add('inactive');
+      editPricesBtn.textContent = 'Edit Prices';
+    }
+
+    function toggleRateEditor() {
+      if (rateEditor.classList.contains('inactive')) {
+        rateEditor.classList.remove('inactive');
+        editRateBtn.textContent = 'Cancel';
+      } else {
+        rateEditor.classList.add('inactive');
+        editRateBtn.textContent = 'Edit Rate';
+        weeklyRateInput.value = weeklyMealCost;
+      }
+    }
+
+    // this allows rates to be saved if edited
+    function saveRate() {
+      const newRate = parseFloat(weeklyRateInput.value);
+      
+      if (!isNaN(newRate) && newRate > 0) {
+        weeklyMealCost = parseFloat(newRate.toFixed(2));
+        weeklyRateDisplay.textContent = `$${newRate.toFixed(2)} per week`;
+      } else {
+        alert("Please enter a valid weekly rate (must be greater than zero).");
+        weeklyRateInput.value = weeklyMealCost;
+        return;
+      }
+      
+      rateEditor.classList.add('inactive');
+      editRateBtn.textContent = 'Edit Rate';
+    }
+
+    function calculateCharge() {
+      const withdrawalWeeks = parseInt(withdrawalWeeksInput.value);
+      const useFixedRate = useFixedRateCheckbox.checked;
+      const selectedPlan = document.querySelector('input[name="mealPlan"]:checked').value;
+      const planName = selectedPlan === 'strykerClassic' ? 'Stryker Classic' : 'Stryker Double';
+      const planAmount = planRates[selectedPlan];
+      
+      if (isNaN(withdrawalWeeks) || withdrawalWeeks < 0 || withdrawalWeeks > SEMESTER_WEEKS) {
+        alert(`Please enter a valid number of weeks (0-${SEMESTER_WEEKS})`);
+        return;
+      }
+      
+      if (planAmount <= 0) {
+        alert("Meal plan rate must be greater than zero. Please check your meal plan prices.");
+        return;
+      }
+      
+      if (useFixedRate && weeklyMealCost <= 0) {
+        alert("Weekly meal cost must be greater than zero. Please check your fixed rate value.");
+        return;
+      }
+      
+      let charge, refund;
+      
+      if (useFixedRate) {
+        // calculates using fixed weekly rate
+        charge = parseFloat((weeklyMealCost * withdrawalWeeks).toFixed(2));
+        refund = parseFloat((planAmount - charge).toFixed(2));
+      } else {
+        // calculates using proportional rate
+        const weeklyRate = parseFloat((planAmount / SEMESTER_WEEKS).toFixed(2));
+        charge = parseFloat((weeklyRate * withdrawalWeeks).toFixed(2));
+        refund = parseFloat((planAmount - charge).toFixed(2));
+      }
+      
+      // result format
+      const resultText = `Student is on ${planName} Plan = Refund ${formatCurrency(refund)}\n\nWithdrawal effective after ${withdrawalWeeks} weeks = charge for ${withdrawalWeeks} weeks = ${formatCurrency(charge)}`;
+      calculationResult.innerHTML = formatResultHTML(resultText);
+      resultContainer.classList.remove('inactive');
+    }
+
+    // for result format
+    function formatResultHTML(text) {
+      const parts = text.split('\n\n');
+      let html = '';
+      parts.forEach((part, index) => {
+        const div = document.createElement('div');
+        div.className = index === 0 ? 'result-section mb-4' : 'result-section';
+        if (part.includes('Refund')) {
+          const planInfo = part.split('Student is on ')[1].split(' Plan =')[0];
+          const refundAmount = part.split('Refund $')[1];
+          div.innerHTML = `
+            <div class="result-block">
+              <div class="result-line">Student is on ${planInfo} Plan</div>
+              <div class="result-line">Refund: ${formatCurrency(parseFloat(refundAmount))}</div>
+            </div>
+          `;
+        } else {
+          const weeksInfo = part.split('Withdrawal effective after ')[1].split(' weeks =')[0];
+          const chargeWeeks = part.split('charge for ')[1].split(' weeks =')[0];
+          const chargeAmount = part.split('= $')[1];
+          div.innerHTML = `
+            <div class="result-block">
+              <div class="result-line">Withdrawal effective after ${weeksInfo} weeks</div>
+              <div class="result-line">Charge for ${chargeWeeks} weeks</div>
+              <div class="result-line">Amount: ${formatCurrency(parseFloat(chargeAmount))}</div>
+            </div>
+          `;
+        }
+        html += div.outerHTML;
+      });
+      return html;
+    }
+
+    // this is the copy to clipboard function i made
+    function copyToClipboard(text) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = text;
+      const plainText = tempDiv.textContent || tempDiv.innerText || '';
+      navigator.clipboard.writeText(plainText).then(() => {
+        copyResultBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Copied!
+        `;
+        copyResultBtn.classList.add('copied');
+        setTimeout(() => {
+          copyResultBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          `;
+          copyResultBtn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // this is for format
+    function formatCurrency(amount) {
+      return '$' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    }
+  </script>
+</body>
+</html>
+
